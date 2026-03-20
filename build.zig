@@ -2,11 +2,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const maybe_vt_mod: ?*std.Build.Module = blk: {
-        if (builtin.os.tag == .windows) break :blk @import("buildwindows.zig").createGhosttyWindows(b);
-        if (b.lazyDependency("ghostty", .{})) |ghostty| break :blk ghostty.module("ghostty-vt");
-        break :blk null;
-    };
+    const vt = b.dependency("ghostty", .{}).module("ghostty-vt");
 
     const icon_gen_exe = b.addExecutable(.{
         .name = "icon_gen",
@@ -50,7 +46,7 @@ pub fn build(b: *std.Build) void {
         }),
         .win32_manifest = b.path("src/win32.manifest"),
     });
-    addImports(b, target.result, exe.root_module, icons, maybe_vt_mod);
+    addImports(b, target.result, exe.root_module, icons, vt);
 
     exe.addWin32ResourceFile(.{
         .file = b.path("src/win32.rc"),
@@ -75,7 +71,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    addImports(b, target.result, tests.root_module, icons, maybe_vt_mod);
+    addImports(b, target.result, tests.root_module, icons, vt);
     const run_tests = b.addRunArtifact(tests);
     b.step("test", "Run unit tests").dependOn(&run_tests.step);
 }
@@ -85,10 +81,10 @@ fn addImports(
     target: std.Target,
     mod: *std.Build.Module,
     icons: *std.Build.Module,
-    maybe_vt_mod: ?*std.Build.Module,
+    vt: *std.Build.Module,
 ) void {
     mod.addImport("icons", icons);
-    if (maybe_vt_mod) |vt_mod| mod.addImport("vt", vt_mod);
+    mod.addImport("vt", vt);
     switch (target.os.tag) {
         .windows => if (b.lazyDependency("win32", .{})) |win32_dep| {
             mod.addImport("win32", win32_dep.module("win32"));

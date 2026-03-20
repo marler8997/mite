@@ -25,10 +25,8 @@
             .lazy = true,
         },
         .ghostty = .{
-            .url = "git+https://github.com/ghostty-org/ghostty#e75f8956c576ea8acf6ee4e70d45f918738e7512",
-            .hash = "ghostty-1.3.2-dev-5UdBC04Z-gS-yzSmboAJRhLNQR-GqcRX6wKVndlwgUbO",
-            // lazy because we can't fetch on windows due to symlink in libxml2
-            .lazy = true,
+            .url = "git+https://github.com/ghostty-org/ghostty#aac491657be1c17f214a32c6ee0b1a221bf99bd1",
+            .hash = "ghostty-1.3.2-dev-5UdBC9Kx_gRCw-CiFO0xlNsAsqu8lTkIx6J-jjLbBbqr",
         },
         .zipcmdline = .{
             .url = "git+https://github.com/marler8997/zipcmdline#a8807944231b46565450504cb7f3146e29e51335",
