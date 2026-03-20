@@ -4,7 +4,7 @@ pub fn main() !void {
         break :blk try Cmdline.parse(&args_it);
     };
 
-    try @import("desktop.zig").install();
+    try @import("posix/desktop.zig").install();
 
     var io_pinned: IoPinned = undefined;
     var backend = blk: {

@@ -1186,4 +1186,4 @@ const vt = @import("vt");
 const mite = @import("mite.zig");
 const Cmdline = @import("Cmdline.zig");
 const TrueType = @import("TrueType");
-const fontconfig = @import("fontconfig.zig");
+const fontconfig = @import("posix/fontconfig.zig");

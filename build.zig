@@ -44,12 +44,12 @@ pub fn build(b: *std.Build) void {
             // Windows uses std.Thread for the ConPTY read thread.
             .single_threaded = if (target.result.os.tag == .windows) null else true,
         }),
-        .win32_manifest = b.path("src/win32.manifest"),
+        .win32_manifest = b.path("src/win32/mite.manifest"),
     });
     addImports(b, target.result, exe.root_module, icons, vt);
 
     exe.addWin32ResourceFile(.{
-        .file = b.path("src/win32.rc"),
+        .file = b.path("src/win32/mite.rc"),
         .include_paths = &.{ico.dirname()},
     });
     if (target.result.os.tag == .windows) {
@@ -88,7 +88,7 @@ fn addImports(
     switch (target.os.tag) {
         .windows => if (b.lazyDependency("win32", .{})) |win32_dep| {
             mod.addImport("win32", win32_dep.module("win32"));
-            mod.addIncludePath(b.path("src"));
+            mod.addIncludePath(b.path("src/win32"));
         },
         else => {
             if (b.lazyDependency("x11", .{})) |x11_dep| {
