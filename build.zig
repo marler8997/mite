@@ -4,32 +4,12 @@ pub fn build(b: *std.Build) void {
 
     const vt = b.dependency("ghostty", .{}).module("ghostty-vt");
 
-    const icon_gen_exe = b.addExecutable(.{
-        .name = "icon_gen",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/icon_gen.zig"),
-            .target = b.graph.host,
-            .imports = &.{
-                .{
-                    .name = "backportflate",
-                    .module = b.dependency("zipcmdline", .{}).module("backportflate"),
-                },
-            },
-        }),
+    const appicon_dep = b.dependency("appicon", .{});
+    const x11_mod = if (b.lazyDependency("x11", .{})) |dep| dep.module("x11") else null;
+    const appicon_mod = appicon.createModule(b, appicon_dep, .{ .x11 = x11_mod });
+    const miteicon = appicon.createLinuxIcon(b, appicon_dep, appicon_mod, &.{
+        .{ .source = b.path("src/mite.png"), .sizes = &.{ 16, 32, 48, 128 } },
     });
-
-    const icons = blk: {
-        const run = b.addRunArtifact(icon_gen_exe);
-        run.addFileArg(b.path("src/mite.png"));
-        break :blk b.createModule(.{
-            .root_source_file = run.addOutputFileArg("icon_data.zig"),
-        });
-    };
-    const ico = blk: {
-        const run = b.addRunArtifact(icon_gen_exe);
-        run.addFileArg(b.path("src/mite.png"));
-        break :blk run.addOutputFileArg("mite.ico");
-    };
 
     const main = b.path(switch (target.result.os.tag) {
         .windows => "src/mitewindows.zig",
@@ -46,11 +26,12 @@ pub fn build(b: *std.Build) void {
         }),
         .win32_manifest = b.path("src/win32/mite.manifest"),
     });
-    addImports(b, target.result, exe.root_module, icons, vt);
+    addImports(b, target.result, exe.root_module, miteicon, vt);
 
     exe.addWin32ResourceFile(.{
         .file = b.path("src/win32/mite.rc"),
-        .include_paths = &.{ico.dirname()},
+        // TODO: add include path if/when we use appicon to generate our .ico file
+        // .include_paths = &.{ico.dirname()},
     });
     if (target.result.os.tag == .windows) {
         exe.subsystem = .Windows;
@@ -71,7 +52,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
-    addImports(b, target.result, tests.root_module, icons, vt);
+    addImports(b, target.result, tests.root_module, miteicon, vt);
     const run_tests = b.addRunArtifact(tests);
     b.step("test", "Run unit tests").dependOn(&run_tests.step);
 }
@@ -80,10 +61,10 @@ fn addImports(
     b: *std.Build,
     target: std.Target,
     mod: *std.Build.Module,
-    icons: *std.Build.Module,
+    miteicon: *std.Build.Module,
     vt: *std.Build.Module,
 ) void {
-    mod.addImport("icons", icons);
+    mod.addImport("miteicon", miteicon);
     mod.addImport("vt", vt);
     switch (target.os.tag) {
         .windows => if (b.lazyDependency("win32", .{})) |win32_dep| {
@@ -109,3 +90,4 @@ fn addImports(
 
 const builtin = @import("builtin");
 const std = @import("std");
+const appicon = @import("appicon");

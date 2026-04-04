@@ -14,6 +14,10 @@
             .hash = "wayland-0.0.0-nl2rub5KAQArdw4pakt8cxUqAgRdWbGDUp5vidVZJwAe",
             .lazy = true,
         },
+        .appicon = .{
+            .url = "git+https://github.com/marler8997/appicon#3c202ade6ac6d248c7ab28eccb92c43d14494e6d",
+            .hash = "appicon-0.0.1-Q2lBVnl6AABte6iTEcMK7B3oihqQXBnprpaXXPCOOhTP",
+        },
         .win32 = .{
             .url = "git+https://github.com/marlersoft/zigwin32#fd6ebce3ebfe48f291069c0ddc518b2cc83be450",
             .hash = "zigwin32-25.0.28-preview-AAAAALYs5QNcI6U4YMngK-zET_wKAM10AWdbIcWEUaYV",

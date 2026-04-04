@@ -213,15 +213,7 @@ fn init2(io_pinned: *mite.IoPinned, cmdline: *const Cmdline) !mite.Backend {
     // Format: "instance\0class\0"
     try sink.ChangeProperty(.replace, ids.window(), .WM_CLASS, .STRING, u8, .{ .ptr = "mite\x00mite\x00", .len = 10 });
 
-    // Set window icon (_NET_WM_ICON)
-    // Decompress per-size zlib IDAT data, undo PNG row filters, convert RGBA→ARGB.
-    {
-        const icons = @import("icons");
-        for (icons.entries, 0..) |icon, i| {
-            const mode: x11.change_property.Mode = if (i == 0) .replace else .append;
-            try setWmIcon(&sink, ids.window(), net_wm_icon_atom, mode, icon.size, icon.idat_zlib);
-        }
-    }
+    try miteicon.setWmIcons(&sink, ids.window(), net_wm_icon_atom);
 
     const render_ext: RenderExt = blk: {
         const ext = try x11.draft.synchronousQueryExtension(&source, &sink, x11.render.name) orelse {
@@ -694,55 +686,6 @@ fn drainX11Events(
     return damaged;
 }
 
-/// Decompress a zlib-compressed PNG IDAT, undo row filters, convert RGBA→ARGB,
-/// and send as a _NET_WM_ICON ChangeProperty chunk.
-fn setWmIcon(
-    sink: *x11.RequestSink,
-    window: x11.Window,
-    icon_atom: x11.Atom,
-    mode: x11.change_property.Mode,
-    size: u16,
-    idat_zlib: []const u8,
-) error{WriteFailed}!void {
-    const num_u32s: u32 = 2 + @as(u32, size) * size;
-    const msg_len: u32 = 6 + num_u32s;
-    var offset: usize = 0;
-    try x11.writeAll(sink.writer, &offset, &[_]u8{
-        @intFromEnum(x11.Opcode.change_property),
-        @intFromEnum(mode),
-    });
-    try x11.writeInt(sink.writer, &offset, u16, @intCast(msg_len));
-    try x11.writeInt(sink.writer, &offset, u32, @intFromEnum(window));
-    try x11.writeInt(sink.writer, &offset, u32, @intFromEnum(icon_atom));
-    try x11.writeInt(sink.writer, &offset, u32, @intFromEnum(x11.Atom.CARDINAL));
-    try x11.writeAll(sink.writer, &offset, &[_]u8{ 32, 0, 0, 0 });
-    try x11.writeInt(sink.writer, &offset, u32, num_u32s);
-    // width, height
-    try x11.writeInt(sink.writer, &offset, u32, size);
-    try x11.writeInt(sink.writer, &offset, u32, size);
-
-    // Decompress zlib IDAT data, strip filter bytes, convert RGBA→ARGB
-    var input_reader: std.Io.Reader = .fixed(idat_zlib);
-    var decompress_buf: [std.compress.flate.max_window_len]u8 = undefined;
-    var decompressor = std.compress.flate.Decompress.init(&input_reader, .zlib, &decompress_buf);
-
-    for (0..size) |_| {
-        // Skip PNG filter byte (we only use filter 0 = none)
-        var filter_buf: [1]u8 = undefined;
-        decompressor.reader.readSliceAll(&filter_buf) catch return error.WriteFailed;
-
-        // Read RGBA pixels for this row, write as ARGB u32s
-        for (0..size) |_| {
-            var rgba: [4]u8 = undefined;
-            decompressor.reader.readSliceAll(&rgba) catch return error.WriteFailed;
-            const argb: u32 = @as(u32, rgba[3]) << 24 | @as(u32, rgba[0]) << 16 | @as(u32, rgba[1]) << 8 | rgba[2];
-            try x11.writeInt(sink.writer, &offset, u32, argb);
-        }
-    }
-
-    sink.sequence +%= 1;
-}
-
 fn resolveCellBg(cell: vt.Cell, page: *const vt.Page, palette: *const vt.color.Palette) u24 {
     var cell_bg: u24 = mite.default_bg;
     if (cell.style_id != 0) {
@@ -1182,6 +1125,7 @@ fn parseXftDpi(data: []const u8) ?f32 {
 
 const std = @import("std");
 const x11 = @import("x11");
+const miteicon = @import("miteicon");
 const vt = @import("vt");
 const mite = @import("mite.zig");
 const Cmdline = @import("Cmdline.zig");

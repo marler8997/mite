@@ -1,10 +1,20 @@
+const mite_config: miteicon.Config = .{
+    .id = "mite",
+    .startup_wm_class = "mite",
+    .desktop_entry = .{
+        .Name = "Mite",
+        .Comment = "Terminal Emulator",
+        .Exec = "mite",
+        .Categories = "System;TerminalEmulator",
+    },
+};
 pub fn main() !void {
     const cmdline = blk: {
         var args_it = std.process.args();
         break :blk try Cmdline.parse(&args_it);
     };
 
-    try @import("posix/desktop.zig").install();
+    try miteicon.installDesktop(mite_config);
 
     var io_pinned: IoPinned = undefined;
     var backend = blk: {
@@ -282,6 +292,7 @@ pub fn errExit(comptime fmt: []const u8, args: anytype) noreturn {
 const builtin = @import("builtin");
 const std = @import("std");
 const posix = std.posix;
+const miteicon = @import("miteicon");
 
 const os = switch (builtin.os.tag) {
     .linux => @import("os/linux.zig"),
